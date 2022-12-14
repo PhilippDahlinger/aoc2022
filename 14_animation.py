@@ -102,14 +102,16 @@ def first(screen, set_position_only=True, frame_sleep=0.1):
             c.simulate_sand_elt()
         else:
             c.step_sand_elt()
-            screen.print_at("o", c.sand_elt[0] - c.offset_x, c.sand_elt[1] - c.offset_y)
+            screen.print_at("o", c.sand_elt[0] - c.offset_x, c.sand_elt[1] - c.offset_y, colour=Screen.COLOUR_RED)
 
         for elt in c.elts:
             if c.elts[elt] == "rock":
-                symbol = "#"
+                symbol = "█"
+                color = Screen.COLOUR_GREEN
             else:
                 symbol = "o"
-            screen.print_at(symbol, elt[0] - c.offset_x, elt[1] - c.offset_y)
+                color = Screen.COLOUR_CYAN
+            screen.print_at(symbol, elt[0] - c.offset_x, elt[1] - c.offset_y, colour=color)
         screen.refresh()
         sleep(frame_sleep)
 
@@ -121,7 +123,7 @@ if __name__ == "__main__":
     else:
         set_position_only = True
     if set_position_only:
-        frame_sleep = 0.01
+        frame_sleep = 0.05
     else:
-        frame_sleep = 0.1
+        frame_sleep = 0.02
     Screen.wrapper(lambda s: first(s, set_position_only=set_position_only, frame_sleep=frame_sleep))
