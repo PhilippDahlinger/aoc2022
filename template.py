@@ -1,4 +1,4 @@
-from utils.read_txt_data import txt_to_numpy, txt_to_str
+from utils.read_txt_data import txt_to_str
 
 
 def first():
