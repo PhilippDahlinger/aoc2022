@@ -1,6 +1,7 @@
 import copy
 
 import numpy as np
+from tqdm import tqdm
 
 from utils.read_txt_data import txt_to_str
 
@@ -37,11 +38,37 @@ class Env:
         d1 = self.get_dist(s1, pos1)
         d2 = self.get_dist(s2, pos2)
         if d1 + 1 >= t1:
-            return self.value_of_node(s2, pos2, t2, copy.deepcopy(enabled), look_aheads)
+            return self.value_of_node(s2, pos2, t2, enabled, look_aheads)
         elif d2 + 1 >= t2:
-            return self.value_of_node(s1, pos1, t1, copy.deepcopy(enabled), look_aheads)
+            return self.value_of_node(s1, pos1, t1, enabled, look_aheads)
         new_t1 = t1 - d1 - 1
         new_t2 = t2 -d2 -1
+        reward = new_t1 * self.nodes[s1]["flow_rate"] + new_t2 * self.nodes[s2]["flow_rate"]
+        new_enabled = copy.deepcopy(enabled)
+        new_enabled.add(s1)
+        new_enabled.add(s2)
+        if look_aheads > 0:
+            next_value = 0
+            for new_s1 in tqdm(self.relevant_nodes, desc="even lower bar"):
+                if new_s1 in new_enabled:
+                    continue
+                for new_s2 in self.relevant_nodes:
+                    if  new_s1 == new_s2 or new_s2 in new_enabled:
+                        continue
+                    new_s1_s2_value = self._multi_agent_value(new_s1, new_s2, s1, s2, new_t1, new_t2, new_enabled, look_aheads - 1)
+                    next_value = max(next_value, new_s1_s2_value)
+            reward += next_value
+        return reward
+
+    def _multi_agent_value(self, s1, s2, pos1, pos2, t1, t2, enabled, look_aheads):
+        d1 = self.get_dist(s1, pos1)
+        d2 = self.get_dist(s2, pos2)
+        if d1 + 1 >= t1:
+            return self.value_of_node(s2, pos2, t2, enabled, look_aheads)
+        elif d2 + 1 >= t2:
+            return self.value_of_node(s1, pos1, t1, enabled, look_aheads)
+        new_t1 = t1 - d1 - 1
+        new_t2 = t2 - d2 - 1
         reward = new_t1 * self.nodes[s1]["flow_rate"] + new_t2 * self.nodes[s2]["flow_rate"]
         new_enabled = copy.deepcopy(enabled)
         new_enabled.add(s1)
@@ -52,9 +79,9 @@ class Env:
                 if new_s1 in new_enabled:
                     continue
                 for new_s2 in self.relevant_nodes:
-                    if  new_s1 == new_s2 or new_s2 in new_enabled:
+                    if new_s1 == new_s2 or new_s2 in new_enabled:
                         continue
-                    new_s1_s2_value = self.multi_agent_value_of_pair_of_nodes(new_s1, new_s2, s1, s2, new_t1, new_t2, new_enabled, look_aheads - 1)
+                    new_s1_s2_value = self._multi_agent_value(new_s1, new_s2, s1, s2, new_t1, new_t2, new_enabled, look_aheads - 1)
                     next_value = max(next_value, new_s1_s2_value)
             reward += next_value
         return reward
@@ -102,8 +129,8 @@ def first():
 
 def second():
     env = Env()
-    # one_step_closer(0, env, "AA", "AA", 26, 26, {"AA"}, 3)
-    one_step_closer(614, env, "ZD", "SJ", 23, 21, {"AA", "ZD", "SJ"}, 4)
+    one_step_closer(0, env, "AA", "AA", 26, 26, {"AA"}, 8)
+    # one_step_closer(614, env, "ZD", "SJ", 23, 21, {"AA", "ZD", "SJ"}, 4)
     # one_step_closer(1306, env, "RL", "IG", 20, 17, {"AA", "ZD", "SJ", "RL", "IG"}, 2)
     print("---------------")
     # one_step_closer(1306, env, "RL", "IG", 20, 17, {"AA", "ZD", "SJ", "RL", "IG"}, 4)
@@ -143,11 +170,11 @@ def second():
 
 def one_step_closer(prev_reward, env, p1, p2, t1, t2, enabled, look_aheads):
     moves = []
-    for s1 in env.relevant_nodes:
+    for s1 in tqdm(env.relevant_nodes, desc="Upper bar"):
         if s1 in enabled:
             continue
-        for s2 in env.relevant_nodes:
-            if s1 == s2 or s2 in enabled:
+        for s2 in tqdm(env.relevant_nodes, desc="Lower bar"):
+            if s1 <= s2 or s2 in enabled:
                 continue
             reward = env.multi_agent_value_of_pair_of_nodes(s1, s2, p1, p2, t1, t2, enabled, look_aheads)
             moves.append((s1, s2, reward))
